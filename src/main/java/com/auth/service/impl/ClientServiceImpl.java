@@ -24,8 +24,6 @@ public class ClientServiceImpl implements ClientService {
 	
 	public HashMap<String, String> decodeClientCredentials(String clientCredentials) throws UnsupportedEncodingException {
 		
-		// 암호화 부분 개발 필요!!!!!!!!!!!!
-		
 		Decoder decoder = Base64.getDecoder();
 		
 		String decodedClientCredentials = new String(decoder.decode(clientCredentials), "UTF-8");
@@ -46,8 +44,6 @@ public class ClientServiceImpl implements ClientService {
 	}
 	
 	public boolean vertifyClient(String clientId, String clientSecret) throws UnsupportedEncodingException {
-		
-		// 암호화 부분 개발 필요!!!!!!!!!!!!
 		
 		Client clientInDB = findByClientId(clientId);
 		

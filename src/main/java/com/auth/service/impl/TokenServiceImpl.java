@@ -22,14 +22,16 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.auth.dto.Client;
-import com.auth.dto.RSAKeyPair;
+import com.auth.dto.JWKey;
 import com.auth.dto.TokenVertifyInfo;
 import com.auth.repository.ClientDao;
-import com.auth.repository.RSAKeyPairDao;
+import com.auth.repository.JWKeyDao;
 import com.auth.repository.TokenVerifyInfoDao;
 import com.auth.service.ClientService;
-import com.auth.service.RSAKeyPairService;
+import com.auth.service.JWKService;
 import com.auth.service.TokenService;
+import com.auth.utils.AuthConstants;
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
 import com.nimbusds.jose.JWSSigner;
@@ -46,21 +48,24 @@ public class TokenServiceImpl implements TokenService {
 	TokenVerifyInfoDao tokenVertifyInfoDao;
 	
 	@Autowired
-	RSAKeyPairService rsaKeyPairService;
+	JWKService jwkService;
 	
 	@Autowired
 	ClientService clientService;
 	
+	/**
+	 * 토큰 발급
+	 * @throws JOSEException 
+	 */
 	public List<String> issueToken(String authCode, String redirectURL, 
-			String clientCredentials, String grantType, HttpServletRequest request) throws UnsupportedEncodingException {
-				// 클라이언트 검증
+			String clientCredentials, String grantType, HttpServletRequest request) throws UnsupportedEncodingException, JOSEException {
 		
-//		Client client = clientDao.findByClientId(clientCredentials);
 		HashMap<String, String> decodedClientCredentials = clientService.decodeClientCredentials(clientCredentials);
 		
 		String clientId = decodedClientCredentials.get("client-id");
 		String clientSecret = decodedClientCredentials.get("client-secret");
 		
+		// 클라이언트 검증
 		boolean isClientCorrect = clientService.vertifyClient(clientId, clientSecret);
 	
 		if(!isClientCorrect) {
@@ -83,7 +88,7 @@ public class TokenServiceImpl implements TokenService {
 //				return error
 			}
 			
-			String userId = (String)session.getAttribute("user-id");
+//			String userId = (String)session.getAttribute("user-id");
 			String accessToken = genAccessToken(clientId);
 			String refreshToken = getRefreshToken(clientId);
 			
@@ -101,7 +106,7 @@ public class TokenServiceImpl implements TokenService {
 		}
 		
 		else if(grantType.equals("client_credentials")) {
-			String userId = (String)session.getAttribute("user-id");
+//			String userId = (String)session.getAttribute("user-id");
 			String accessToken = genAccessToken(clientId);
 			
 //			PUB 후처리 이력적재
@@ -118,10 +123,16 @@ public class TokenServiceImpl implements TokenService {
 		}
 	}
 	
-	public String genAccessToken(String clientId) {
+	/**
+	 * Access Token 생성
+	 * @throws JOSEException 
+	 * @throws NoSuchAlgorithmException 
+	 */
+	public String genAccessToken(String clientId) throws JOSEException {
 		// JWK To PrivateKey To signature
-//		PrivateKey privateKey = selectPrivateKeyByKid// jwk.toRSAKey().toPrivateKey();
-				
+		JWKey jwkey = jwkService.findJWKeyById(AuthConstants.JWK_KID);
+		PrivateKey privateKey = jwkey.getJwk().toRSAKey().toPrivateKey();
+
 		// Create RSA Signer
 		JWSSigner signer = null;
 		signer = new RSASSASigner(privateKey);
@@ -143,9 +154,9 @@ public class TokenServiceImpl implements TokenService {
 
 		// make access token with claim set
 		SignedJWT accessToken = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimSet);
-
 		// Apply the RSA-256 protection
 		accessToken.sign(signer);
+
 				
 		// Serialize to compact form, produces something like
 		// eyJhbGciOiJIUzI1NiJ9.SGVsbG8sIHdvcmxkIQ.onO9Ihudz3WkiauDO2Uhyuz0Y18UASXlSc1eS0NkWyA
@@ -154,9 +165,13 @@ public class TokenServiceImpl implements TokenService {
 		return accessTokenSerialized;
 	}
 	
-	public String getRefreshToken(String clientId) {
+	/**
+	 * Refresh Token 생성
+	 */
+	public String getRefreshToken(String clientId) throws JOSEException {
 		// JWK To PrivateKey To signature
-//		PrivateKey privateKey = rsaKeyPairService.findRSAKeyPairById(clientId) // jwk.toRSAKey().toPrivateKey();
+		JWKey jwkey = jwkService.findJWKeyById(AuthConstants.JWK_KID);
+		PrivateKey privateKey = jwkey.getJwk().toRSAKey().toPrivateKey();
 				
 		// Create RSA Signer
 		JWSSigner signer = null;
@@ -179,8 +194,6 @@ public class TokenServiceImpl implements TokenService {
 
 		// make access token with claim set
 		SignedJWT refreshToken = new SignedJWT(new JWSHeader(JWSAlgorithm.RS256), jwtClaimSet);
-
-		// Apply the RSA-256 protection
 		refreshToken.sign(signer);
 				
 		// Serialize to compact form, produces something like
@@ -190,7 +203,10 @@ public class TokenServiceImpl implements TokenService {
 		return accessTokenSerialized;
 	}
 	
-	public TokenVertifyInfo findTokenVertifyInfoById(String clientId) throws NoSuchAlgorithmException {
+	/**
+	 * 토큰 검증정보 추출
+	 */
+	public TokenVertifyInfo findTokenVertifyInfoById(String clientId) {
 		Optional<TokenVertifyInfo> tokenVertifyInfo = tokenVertifyInfoDao.findById(clientId);
 		
 		return tokenVertifyInfo.orElseThrow(() -> new NoSuchElementException());
