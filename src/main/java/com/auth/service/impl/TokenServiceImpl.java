@@ -211,4 +211,21 @@ public class TokenServiceImpl implements TokenService {
 		
 		return tokenVertifyInfo.orElseThrow(() -> new NoSuchElementException());
 	}
+	
+	/**
+	 * 토큰 재발급 서비스 구현
+	 */
+	public String reIssueToken(String userId, String clientId, String refreshToken) {
+		// Refresh Token 검증
+		boolean isRefreshTokenCorrect = verifyRefreshToken(userId, clientId, refreshToken);
+	
+		String newAccessToken = "";
+		
+		return newAccessToken;
+	}
+	
+	boolean verifyRefreshToken(String userId, String clientId, String refreshToken) {
+		
+		return true;
+	}
 }

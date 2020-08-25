@@ -12,4 +12,6 @@ public interface ClientService {
 	HashMap<String, String> decodeClientCredentials(String clientCredentials) throws UnsupportedEncodingException;
 	
 	public Client findByClientId(String clientId);
+	
+	public void registerClient(Client client);
 }

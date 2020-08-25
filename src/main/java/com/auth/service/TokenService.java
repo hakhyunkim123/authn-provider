@@ -18,5 +18,7 @@ public interface TokenService {
 	
 	public String getRefreshToken(String clientId) throws JOSEException;
 	
+	public String reIssueToken(String userid, String clientId, String refreshToken);
+	
 	public TokenVertifyInfo findTokenVertifyInfoById(String clientId);
 }

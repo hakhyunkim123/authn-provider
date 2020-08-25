@@ -55,4 +55,8 @@ public class ClientServiceImpl implements ClientService {
 		
 		return client.orElseThrow(() -> new NoSuchElementException());
 	}
+	
+	public void registerClient(Client client) {
+		clientDao.save(client);
+	}
 }
